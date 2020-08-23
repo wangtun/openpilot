@@ -114,6 +114,8 @@ QList<Network> WifiSettings::get_networks(QString adapter){
 
 void WifiSettings::connect(QByteArray ssid, QString password){
   // TODO: handle different authentication types, None, WEP, WPA, WPA Enterprise
+  // TODO: hande exisiting connection for same ssid
+
   Connection connection;
   connection["connection"]["type"] = "802-11-wireless";
   connection["connection"]["uuid"] = QUuid::createUuid().toString().remove('{').remove('}');
