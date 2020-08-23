@@ -37,6 +37,7 @@ T get_response(QDBusMessage response){
 WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
   qDBusRegisterMetaType<Connection>();
   QString adapter = get_adapter();
+  request_scan(adapter);
   QList<Network> networks = get_networks(adapter);
 
   QVBoxLayout *vlayout = new QVBoxLayout;
@@ -138,6 +139,14 @@ void WifiSettings::connect(QByteArray ssid, QString password){
     qDebug() << result.value().path();
   }
 
+}
+
+void WifiSettings::request_scan(QString adapter){
+  QDBusConnection bus = QDBusConnection::systemBus();
+  QDBusInterface nm(nm_service, adapter, wireless_device_iface, bus);
+  QDBusMessage response = nm.call("RequestScan",  QVariantMap());
+
+  qDebug() << response;
 }
 
 QString WifiSettings::get_adapter(){

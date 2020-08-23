@@ -14,6 +14,7 @@ private:
   QString get_adapter();
   QList<Network> get_networks(QString adapter);
   void connect(QByteArray ssid, QString password);
+  void request_scan(QString adapter);
 public:
   explicit WifiSettings(QWidget *parent = 0);
 };
