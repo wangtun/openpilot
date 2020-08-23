@@ -38,7 +38,9 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
   qDBusRegisterMetaType<Connection>();
   QString adapter = get_adapter();
   request_scan(adapter);
+
   QList<Network> networks = get_networks(adapter);
+  QString active_ap = get_active_ap(adapter);
 
   QVBoxLayout *vlayout = new QVBoxLayout;
 
@@ -55,8 +57,11 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     hlayout->addWidget(icon);
     hlayout->addSpacing(20);
 
-    QPushButton * button = new QPushButton("Connect");
-    button->setFixedWidth(200);
+    bool connected = active_ap == network.path;
+    QPushButton * button = new QPushButton(connected ? "Connected" : "Connect");
+    button->setFixedWidth(250);
+    button->setDisabled(connected);
+
     hlayout->addWidget(button);
     hlayout->addSpacing(20);
     vlayout->addLayout(hlayout);
@@ -73,11 +78,11 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     }
   )");
 
+  // TODO: Merge 2.4 and 5ghz networks with same ssid
   // TODO: Handle NetworkManager not running
   // TODO: Handle no wireless adapter found
   // TODO: periodically request scan
   // TODO: periodically update network list
-  // TODO: read currently connected SSID and show connected in list
   // TODO: implement connecting (including case with wrong password)
 }
 
@@ -101,7 +106,7 @@ QList<Network> WifiSettings::get_networks(QString adapter){
 
     response = device_props.call("Get", ap_iface, "Strength");
     unsigned int strength = get_response<unsigned int>(response);
-    Network network = {ssid, strength};
+    Network network = {path.path(), ssid, strength};
 
     if (ssid.length()){
       r.push_back(network);
@@ -149,6 +154,14 @@ void WifiSettings::request_scan(QString adapter){
   QDBusMessage response = nm.call("RequestScan",  QVariantMap());
 
   qDebug() << response;
+}
+
+QString WifiSettings::get_active_ap(QString adapter){
+  QDBusConnection bus = QDBusConnection::systemBus();
+  QDBusInterface device_props(nm_service, adapter, props_iface, bus);
+  QDBusMessage response = device_props.call("Get", wireless_device_iface, "ActiveAccessPoint");
+  QDBusObjectPath r = get_response<QDBusObjectPath>(response);
+  return r.path();
 }
 
 QString WifiSettings::get_adapter(){
