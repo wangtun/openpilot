@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QPixmap>
 #include <QPushButton>
+#include <QInputDialog>
 
 typedef QMap<QString, QMap<QString, QVariant> > Connection;
 Q_DECLARE_METATYPE(Connection)
@@ -84,6 +85,10 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     seen_ssids.insert(network.ssid);
   }
 
+  QPushButton * test_button = new QPushButton("test");
+  QObject::connect(test_button, SIGNAL(clicked()), this, SLOT(handle_connect_button()));
+  vlayout->addWidget(test_button);
+
   setLayout(vlayout);
 
 
@@ -95,12 +100,20 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     }
   )");
 
+
   // TODO: Handle NetworkManager not running
   // TODO: Handle no wireless adapter found
   // TODO: periodically request scan
   // TODO: periodically update network list
   // TODO: implement connecting (including case with wrong password)
 }
+
+void WifiSettings::handle_connect_button(void){
+  QString text = QInputDialog::getText(this, "Title", "Password:");
+
+  qDebug() << "Entered:" << text;
+}
+
 
 QList<Network> WifiSettings::get_networks(QString adapter){
   QList<Network> r;

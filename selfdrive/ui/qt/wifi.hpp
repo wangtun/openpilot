@@ -21,4 +21,8 @@ private:
   unsigned int get_ap_strength(QString network_path);
 public:
   explicit WifiSettings(QWidget *parent = 0);
+
+public slots:
+  void handle_connect_button(void);
+
 };
