@@ -1,5 +1,6 @@
 #include "qt/wifi.hpp"
 
+#include <algorithm>
 #include <QDebug>
 #include <QListWidget>
 #include <QVBoxLayout>
@@ -31,6 +32,10 @@ T get_response(QDBusMessage response){
   QDBusVariant dbvFirst = first.value<QDBusVariant>();
   QVariant vFirst = dbvFirst.variant();
   return vFirst.value<T>();
+}
+
+bool compare_by_strength(const Network &a, const Network &b){
+  return a.strength > b.strength;
 }
 
 
@@ -113,6 +118,9 @@ QList<Network> WifiSettings::get_networks(QString adapter){
     }
   }
   args.endArray();
+
+  // Sort by strength
+  std::sort(r.begin(), r.end(), compare_by_strength);
 
   return r;
 }
