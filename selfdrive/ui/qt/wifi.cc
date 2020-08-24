@@ -11,6 +11,7 @@
 #include <QPixmap>
 #include <QPushButton>
 #include <QInputDialog>
+#include <QLineEdit>
 
 typedef QMap<QString, QMap<QString, QVariant> > Connection;
 Q_DECLARE_METATYPE(Connection)
@@ -88,6 +89,10 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
   QPushButton * test_button = new QPushButton("test");
   QObject::connect(test_button, SIGNAL(clicked()), this, SLOT(handle_connect_button()));
   vlayout->addWidget(test_button);
+
+  QLineEdit * line_edit = new QLineEdit();
+  vlayout->addWidget(line_edit);
+
 
   setLayout(vlayout);
 
