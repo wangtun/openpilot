@@ -1,6 +1,8 @@
 #include "qt/wifi.hpp"
 
 #include <algorithm>
+#include <set>
+
 #include <QDebug>
 #include <QListWidget>
 #include <QVBoxLayout>
@@ -46,13 +48,22 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
 
   QList<Network> networks = get_networks(adapter);
   QString active_ap = get_active_ap(adapter);
+  QByteArray active_ssid = get_ap_ssid(active_ap);
 
   QVBoxLayout *vlayout = new QVBoxLayout;
+  std::set<QByteArray> seen_ssids;
+
+  // Add ssid of currently connected network so we only show one
+  seen_ssids.insert(active_ssid);
 
   for (auto &network : networks){
+    bool connected = active_ap == network.path;
     unsigned int strength = std::round(network.strength / 25.0) * 25;
 
-    qDebug() << network.ssid << network.strength << strength;
+    if (seen_ssids.count(network.ssid) && !connected){
+      continue;
+    }
+
     QHBoxLayout *hlayout = new QHBoxLayout;
     hlayout->addWidget(new QLabel(QString::fromUtf8(network.ssid)));
     QPixmap pix("../assets/offroad/indicator_wifi_" + QString::number(strength) + ".png");
@@ -62,7 +73,6 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     hlayout->addWidget(icon);
     hlayout->addSpacing(20);
 
-    bool connected = active_ap == network.path;
     QPushButton * button = new QPushButton(connected ? "Connected" : "Connect");
     button->setFixedWidth(250);
     button->setDisabled(connected);
@@ -70,6 +80,8 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     hlayout->addWidget(button);
     hlayout->addSpacing(20);
     vlayout->addLayout(hlayout);
+
+    seen_ssids.insert(network.ssid);
   }
 
   setLayout(vlayout);
@@ -83,7 +95,6 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     }
   )");
 
-  // TODO: Merge 2.4 and 5ghz networks with same ssid
   // TODO: Handle NetworkManager not running
   // TODO: Handle no wireless adapter found
   // TODO: periodically request scan
@@ -104,13 +115,8 @@ QList<Network> WifiSettings::get_networks(QString adapter){
     QDBusObjectPath path;
     args >> path;
 
-    // TODO: also return security type
-    QDBusInterface device_props(nm_service, path.path(), props_iface, bus);
-    QDBusMessage response = device_props.call("Get", ap_iface, "Ssid");
-    QByteArray ssid = get_response<QByteArray>(response);
-
-    response = device_props.call("Get", ap_iface, "Strength");
-    unsigned int strength = get_response<unsigned int>(response);
+    QByteArray ssid = get_ap_ssid(path.path());
+    unsigned int strength = get_ap_strength(path.path());
     Network network = {path.path(), ssid, strength};
 
     if (ssid.length()){
@@ -170,6 +176,22 @@ QString WifiSettings::get_active_ap(QString adapter){
   QDBusMessage response = device_props.call("Get", wireless_device_iface, "ActiveAccessPoint");
   QDBusObjectPath r = get_response<QDBusObjectPath>(response);
   return r.path();
+}
+
+QByteArray WifiSettings::get_ap_ssid(QString network_path){
+  // TODO: abstract get propery function with template
+  QDBusConnection bus = QDBusConnection::systemBus();
+  QDBusInterface device_props(nm_service, network_path, props_iface, bus);
+  QDBusMessage response = device_props.call("Get", ap_iface, "Ssid");
+  return get_response<QByteArray>(response);
+}
+
+unsigned int WifiSettings::get_ap_strength(QString network_path){
+  // TODO: abstract get propery function with template
+  QDBusConnection bus = QDBusConnection::systemBus();
+  QDBusInterface device_props(nm_service, network_path, props_iface, bus);
+  QDBusMessage response = device_props.call("Get", ap_iface, "Strength");
+  return get_response<unsigned int>(response);
 }
 
 QString WifiSettings::get_adapter(){
