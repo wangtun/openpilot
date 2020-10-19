@@ -86,14 +86,6 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     seen_ssids.insert(network.ssid);
   }
 
-  QPushButton * test_button = new QPushButton("test");
-  QObject::connect(test_button, SIGNAL(clicked()), this, SLOT(handle_connect_button()));
-  vlayout->addWidget(test_button);
-
-  QLineEdit * line_edit = new QLineEdit();
-  vlayout->addWidget(line_edit);
-
-
   setLayout(vlayout);
 
 
