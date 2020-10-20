@@ -1,4 +1,5 @@
 #include "qt/wifi.hpp"
+#include "qt/keyboard.hpp"
 
 #include <algorithm>
 #include <set>
@@ -12,6 +13,8 @@
 #include <QPushButton>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QCoreApplication>
+#include <QButtonGroup>
 
 typedef QMap<QString, QMap<QString, QVariant> > Connection;
 Q_DECLARE_METATYPE(Connection)
@@ -29,7 +32,6 @@ QString ap_iface = "org.freedesktop.NetworkManager.AccessPoint";
 QString nm_service = "org.freedesktop.NetworkManager";
 
 
-
 template <typename T>
 T get_response(QDBusMessage response){
   QVariant first =  response.arguments().at(0);
@@ -43,7 +45,7 @@ bool compare_by_strength(const Network &a, const Network &b){
 }
 
 
-WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
+WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {//Constructor
   qDBusRegisterMetaType<Connection>();
   QString adapter = get_adapter();
   request_scan(adapter);
@@ -57,8 +59,10 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
 
   // Add ssid of currently connected network so we only show one
   seen_ssids.insert(active_ssid);
-
-  for (auto &network : networks){
+  QButtonGroup* myButtongroup=new QButtonGroup(this);
+  QObject::connect(myButtongroup, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(handleButton(QAbstractButton*)));
+  int i=0;
+  for (Network &network : networks){
     bool connected = active_ap == network.path;
     unsigned int strength = std::round(network.strength / 25.0) * 25;
 
@@ -75,19 +79,24 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     hlayout->addWidget(icon);
     hlayout->addSpacing(20);
 
-    QPushButton * button = new QPushButton(connected ? "Connected" : "Connect");
-    button->setFixedWidth(250);
-    button->setDisabled(connected);
+    QPushButton* m_button = new QPushButton((connected ? "Connected" : "Connect")+(QString(i, QChar(' '))));
+    m_button->setFixedWidth(250);
+    m_button->setDisabled(connected);
+    // connect(m_button, SIGNAL (released()), this, SLOT (handleButton(m_button)));
+    myButtongroup->addButton(m_button,i++);
 
-    hlayout->addWidget(button);
+    hlayout->addWidget(m_button);
     hlayout->addSpacing(20);
     vlayout->addLayout(hlayout);
 
     seen_ssids.insert(network.ssid);
   }
-
+  Keyboard* k=new Keyboard(this);
+  vlayout->addWidget(k);
+  for(auto &x:myButtongroup->buttons()){
+    qDebug() << x;
+  }
   setLayout(vlayout);
-
 
   setStyleSheet(R"(
     QLabel { font-size: 40px }
@@ -97,20 +106,21 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
     }
   )");
 
-
   // TODO: Handle NetworkManager not running
   // TODO: Handle no wireless adapter found
   // TODO: periodically request scan
   // TODO: periodically update network list
   // TODO: implement connecting (including case with wrong password)
+
+  qDebug() << "Running";
 }
 
-void WifiSettings::handle_connect_button(void){
-  QString text = QInputDialog::getText(this, "Title", "Password:");
-
-  qDebug() << "Entered:" << text;
+void WifiSettings::handleButton(QAbstractButton* m_button){
+  // QString text = QInputDialog::getText(this, "Title", "Password:");
+  int id = m_button->text().length()-7;//7="Connect".length()
+  qDebug() << "Clicked a button:" << id;
+  
 }
-
 
 QList<Network> WifiSettings::get_networks(QString adapter){
   QList<Network> r;
@@ -141,14 +151,14 @@ QList<Network> WifiSettings::get_networks(QString adapter){
   return r;
 }
 
-void WifiSettings::connect(QByteArray ssid, QString password){
+void WifiSettings::connect_to(QByteArray ssid, QString password){
   // TODO: handle different authentication types, None, WEP, WPA, WPA Enterprise
   // TODO: hande exisiting connection for same ssid
 
   Connection connection;
   connection["connection"]["type"] = "802-11-wireless";
   connection["connection"]["uuid"] = QUuid::createUuid().toString().remove('{').remove('}');
-  connection["connection"]["id"] = "Connection 1";
+  connection["connection"]["id"] = "Connection 2";
 
   connection["802-11-wireless"]["ssid"] = ssid;
   connection["802-11-wireless"]["mode"] = "infrastructure";
