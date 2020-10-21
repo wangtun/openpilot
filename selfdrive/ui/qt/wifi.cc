@@ -1,5 +1,4 @@
 #include "qt/wifi.hpp"
-#include "qt/keyboard.hpp"
 
 #include <algorithm>
 #include <set>
@@ -90,11 +89,6 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {//Constructor
     vlayout->addLayout(hlayout);
 
     seen_ssids.insert(network.ssid);
-  }
-  Keyboard* k=new Keyboard(this);
-  vlayout->addWidget(k);
-  for(auto &x:myButtongroup->buttons()){
-    qDebug() << x;
   }
   setLayout(vlayout);
 
