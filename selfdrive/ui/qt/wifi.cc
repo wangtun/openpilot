@@ -43,7 +43,6 @@ bool compare_by_strength(const Network &a, const Network &b){
   return a.strength > b.strength;
 }
 
-
 WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
   vlayout = new QVBoxLayout;
   refresh();
@@ -106,6 +105,7 @@ void WifiSettings::refresh(){
     vlayout->addLayout(hlayout);
 
     seen_ssids.push_back(network.ssid);
+    seen_networks.push_back(network);
   }
   qDebug() <<"Adding networks "<< i;
   // QPushButton* refreshButton = new QPushButton("Refresh networks");
@@ -114,17 +114,17 @@ void WifiSettings::refresh(){
 }
 
 void WifiSettings::handleButton(QAbstractButton* m_button){
-  // QString text = QInputDialog::getText(this, "Title", "Password:");
-  int id = m_button->text().length()-7;//7="Connect".length()
+  int id = m_button->text().length()-7;  //7="Connect".length()
   qDebug() << "Clicked a button:" << id;
-  qDebug() << seen_ssids[id];
+  qDebug() << get_ap_ssid(seen_networks[id].path);
+  qDebug() << get_ap_security(seen_networks[id].path);
   QByteArray ssid = seen_ssids[id];
   bool ok;
   QString password = QInputDialog::getText(this, "Password for "+ssid, "Password", QLineEdit::Normal, QDir::home().dirName(), &ok);
   if(ok){
     connect_to(ssid, password);
   }else{
-    qDebug() << "Connection cancelled";
+    qDebug() << "Connection cancelled, user not willing to provide a password.";
   }
 }
 
@@ -211,8 +211,16 @@ QByteArray WifiSettings::get_ap_ssid(QString network_path){
   QDBusMessage response = device_props.call("Get", ap_iface, "Ssid");
   return get_response<QByteArray>(response);
 }
+QByteArray WifiSettings::get_ap_security(QString network_path){
+  // TODO: abstract get propery function with template
+  QDBusConnection bus = QDBusConnection::systemBus();
+  QDBusInterface device_props(nm_service, network_path, props_iface, bus);
+  QDBusMessage response = device_props.call("Get", ap_iface, "WpaFlags");
+  return get_response<QByteArray>(response);
+}
 
 unsigned int WifiSettings::get_ap_strength(QString network_path){
+  qDebug() << network_path;
   // TODO: abstract get propery function with template
   QDBusConnection bus = QDBusConnection::systemBus();
   QDBusInterface device_props(nm_service, network_path, props_iface, bus);

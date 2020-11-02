@@ -17,6 +17,7 @@ class WifiSettings : public QWidget {
 
   private:
     QVector<QByteArray> seen_ssids;
+    QVector<Network> seen_networks;
     QVBoxLayout* vlayout;
 
     void refresh();
@@ -26,6 +27,7 @@ class WifiSettings : public QWidget {
     void request_scan(QString adapter);
     QString get_active_ap(QString adapter);
     QByteArray get_ap_ssid(QString network_path);
+    QByteArray get_ap_security(QString network_path);
     unsigned int get_ap_strength(QString network_path);
   public:
     explicit WifiSettings(QWidget *parent = 0);
