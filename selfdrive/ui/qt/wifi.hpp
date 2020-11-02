@@ -3,6 +3,8 @@
 #include <QtDBus>
 #include <QPushButton>
 #include <QButtonGroup>
+#include <QVBoxLayout>
+#include <QStackedLayout>
 
 struct Network {
   QString path;
@@ -14,6 +16,10 @@ class WifiSettings : public QWidget {
   Q_OBJECT
 
   private:
+    QVector<QByteArray> seen_ssids;
+    QVBoxLayout* vlayout;
+
+    void refresh();
     QString get_adapter();
     QList<Network> get_networks(QString adapter);
     void connect_to(QByteArray ssid, QString password);

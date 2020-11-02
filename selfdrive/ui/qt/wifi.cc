@@ -14,9 +14,9 @@
 #include <QLineEdit>
 #include <QCoreApplication>
 #include <QButtonGroup>
+#include <QStackedLayout>
 
 typedef QMap<QString, QMap<QString, QVariant> > Connection;
-Q_DECLARE_METATYPE(Connection)
 
 QString nm_path = "/org/freedesktop/NetworkManager";
 QString nm_settings_path = "/org/freedesktop/NetworkManager/Settings";
@@ -44,7 +44,29 @@ bool compare_by_strength(const Network &a, const Network &b){
 }
 
 
-WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {//Constructor
+WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {
+  vlayout = new QVBoxLayout;
+  refresh();
+  setLayout(vlayout);
+
+  setStyleSheet(R"(
+    QLabel { font-size: 40px }
+    QPushButton { font-size: 40px }
+    * {
+      background-color: #114265;
+    }
+  )");
+
+  // TODO: Handle NetworkManager not running
+  // TODO: Handle no wireless adapter found
+  // TODO: periodically request scan
+  // TODO: periodically update network list
+  // TODO: implement connecting (including case with wrong password)
+
+  qDebug() << "Running";
+}
+
+void WifiSettings::refresh(){
   qDBusRegisterMetaType<Connection>();
   QString adapter = get_adapter();
   request_scan(adapter);
@@ -53,11 +75,6 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {//Constructor
   QString active_ap = get_active_ap(adapter);
   QByteArray active_ssid = get_ap_ssid(active_ap);
 
-  QVBoxLayout *vlayout = new QVBoxLayout;
-  std::set<QByteArray> seen_ssids;
-
-  // Add ssid of currently connected network so we only show one
-  seen_ssids.insert(active_ssid);
   QButtonGroup* myButtongroup=new QButtonGroup(this);
   QObject::connect(myButtongroup, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(handleButton(QAbstractButton*)));
   int i=0;
@@ -88,32 +105,27 @@ WifiSettings::WifiSettings(QWidget *parent) : QWidget(parent) {//Constructor
     hlayout->addSpacing(20);
     vlayout->addLayout(hlayout);
 
-    seen_ssids.insert(network.ssid);
+    seen_ssids.push_back(network.ssid);
   }
-  setLayout(vlayout);
-
-  setStyleSheet(R"(
-    QLabel { font-size: 40px }
-    QPushButton { font-size: 40px }
-    * {
-      background-color: #114265;
-    }
-  )");
-
-  // TODO: Handle NetworkManager not running
-  // TODO: Handle no wireless adapter found
-  // TODO: periodically request scan
-  // TODO: periodically update network list
-  // TODO: implement connecting (including case with wrong password)
-
-  qDebug() << "Running";
+  qDebug() <<"Adding networks "<< i;
+  // QPushButton* refreshButton = new QPushButton("Refresh networks");
+  // connect(refreshButton, SIGNAL (released()), this, SLOT (refresh()));
+  // vlayout->addWidget(refreshButton);
 }
 
 void WifiSettings::handleButton(QAbstractButton* m_button){
   // QString text = QInputDialog::getText(this, "Title", "Password:");
   int id = m_button->text().length()-7;//7="Connect".length()
   qDebug() << "Clicked a button:" << id;
-  
+  qDebug() << seen_ssids[id];
+  QByteArray ssid = seen_ssids[id];
+  bool ok;
+  QString password = QInputDialog::getText(this, "Password for "+ssid, "Password", QLineEdit::Normal, QDir::home().dirName(), &ok);
+  if(ok){
+    connect_to(ssid, password);
+  }else{
+    qDebug() << "Connection cancelled";
+  }
 }
 
 QList<Network> WifiSettings::get_networks(QString adapter){
